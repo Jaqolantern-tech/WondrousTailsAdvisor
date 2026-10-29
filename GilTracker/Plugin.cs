@@ -19,6 +19,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
+    [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
+    [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
 
     private const string Command = "/gil";
@@ -39,7 +41,7 @@ public sealed class Plugin : IDalamudPlugin
         TitleFont = PluginInterface.UiBuilder.FontAtlas.NewGameFontHandle(new GameFontStyle(GameFontFamilyAndSize.Jupiter20));
         BigFont = PluginInterface.UiBuilder.FontAtlas.NewGameFontHandle(new GameFontStyle(GameFontFamilyAndSize.Jupiter23));
 
-        Tracker = new Tracker(ClientState, PlayerState, Condition, AddonLifecycle, Log,
+        Tracker = new Tracker(ClientState, PlayerState, Condition, AddonLifecycle, TargetManager, DataManager, Log,
             PluginInterface.GetPluginConfigDirectory());
 
         mainWindow = new MainWindow(this);

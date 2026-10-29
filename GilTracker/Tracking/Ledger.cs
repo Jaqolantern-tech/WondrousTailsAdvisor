@@ -17,6 +17,9 @@ public enum Source
     Repairs,
     Teleports,
     Other,
+    Fates,
+    TreasureMaps,
+    Housing,
 }
 
 public enum Period

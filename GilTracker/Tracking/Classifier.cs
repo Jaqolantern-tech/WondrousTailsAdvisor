@@ -8,10 +8,15 @@ public readonly record struct GilContext(
     bool MarketBoard,
     bool Repair,
     bool Shop,
+    bool RetainerMenu,
     bool Quest,
     bool Mail,
     bool Teleporting,
-    bool InDuty);
+    bool InDuty,
+    bool TreasureDuty,
+    bool Fate,
+    bool TreasureCoffer,
+    bool Housing);
 
 public static class Classifier
 {
@@ -27,10 +32,16 @@ public static class Classifier
         if (c.MarketBoard) return Source.MarketBoard;
         if (c.Repair) return Source.Repairs;
         if (c.Shop) return Source.Vendor;
+        // Having a retainer sell items pays you the vendor price on the spot.
+        if (c.RetainerMenu && delta > 0) return Source.Vendor;
+        if (c.Housing) return Source.Housing;
         if (c.Quest) return Source.Quests;
         if (c.Mail) return Source.Mail;
         if (c.Teleporting && delta < 0) return Source.Teleports;
+        if (c.TreasureDuty) return Source.TreasureMaps;
         if (c.InDuty) return Source.Duties;
+        if (c.Fate) return Source.Fates;
+        if (c.TreasureCoffer) return Source.TreasureMaps;
         return Source.Other;
     }
 
@@ -54,6 +65,9 @@ public static class Classifier
         Source.Mail => "Mail",
         Source.Repairs => "Repairs",
         Source.Teleports => "Teleports",
+        Source.Fates => "FATEs",
+        Source.TreasureMaps => "Treasure maps",
+        Source.Housing => "Housing refunds",
         _ => "Everything else",
     };
 
@@ -67,6 +81,9 @@ public static class Classifier
         Source.Mail => "Mail",
         Source.Repairs => "Repairs",
         Source.Teleports => "Teleports",
+        Source.Fates => "FATEs",
+        Source.TreasureMaps => "Treasure maps",
+        Source.Housing => "Housing",
         _ => "Everything else",
     };
 }

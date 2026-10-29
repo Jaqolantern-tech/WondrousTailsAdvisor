@@ -9,6 +9,8 @@ using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Fate;
+using Lumina.Excel.Sheets;
 
 namespace GilTracker.Tracking;
 
@@ -29,16 +31,24 @@ public sealed unsafe class Tracker : IDisposable
     private const string GearShop = "InclusionShop";
     private const string QuestReward = "JournalResult";
     private const string MailWindow = "LetterViewer";
+    private static readonly string[] HousingWindows = ["HousingSignBoard", "MansionSelectRoom"];
+    private static readonly string[] RetainerWindows =
+        ["RetainerList", "InventoryRetainer", "InventoryRetainerLarge", "RetainerSellList", "RetainerSell"];
 
     private static readonly string[] Watched =
     [
         RetainerBank, CompanyChest, TradeWindow, MarketSearch, MarketResults,
-        RepairWindow, ShopWindow, GearShop, QuestReward, MailWindow,
+        RepairWindow, ShopWindow, GearShop, QuestReward, MailWindow, .. RetainerWindows, .. HousingWindows,
     ];
 
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan WindowGrace = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan TeleportGrace = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan FateGrace = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan CofferGrace = TimeSpan.FromSeconds(10);
+
+    // ContentType row for treasure map dungeons (The Aquapolis, The Lost Canals of Uznair and friends).
+    private const uint TreasureHuntContentType = 9;
     private static readonly TimeSpan LoginSettle = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan SaveInterval = TimeSpan.FromSeconds(30);
 
@@ -52,6 +62,8 @@ public sealed unsafe class Tracker : IDisposable
     private readonly IPlayerState playerState;
     private readonly ICondition condition;
     private readonly IAddonLifecycle addonLifecycle;
+    private readonly ITargetManager targets;
+    private readonly IDataManager data;
     private readonly IPluginLog log;
     private readonly string folder;
 
@@ -62,12 +74,18 @@ public sealed unsafe class Tracker : IDisposable
     private DateTime nextSave = DateTime.MinValue;
     private DateTime settleUntil = DateTime.MinValue;
     private DateTime teleportSeen = DateTime.MinValue;
+    private DateTime fateSeen = DateTime.MinValue;
+    private DateTime cofferSeen = DateTime.MinValue;
+    private uint treasureCheckedTerritory = uint.MaxValue;
+    private bool inTreasureDuty;
     private long? lastGil;
     private bool dirty;
 
     public Tracker(IClientState clientState, IPlayerState playerState, ICondition condition,
-        IAddonLifecycle addonLifecycle, IPluginLog log, string folder)
+        IAddonLifecycle addonLifecycle, ITargetManager targets, IDataManager data, IPluginLog log, string folder)
     {
+        this.targets = targets;
+        this.data = data;
         this.clientState = clientState;
         this.playerState = playerState;
         this.condition = condition;
@@ -153,6 +171,14 @@ public sealed unsafe class Tracker : IDisposable
         var loading = condition[ConditionFlag.BetweenAreas] || condition[ConditionFlag.BetweenAreas51];
         if (loading || condition[ConditionFlag.Casting]) teleportSeen = now;
 
+        var fates = FateManager.Instance();
+        if (fates != null && fates->CurrentFate != null) fateSeen = now;
+
+        var target = targets.Target;
+        if (target != null && target.Name.TextValue.Contains("Coffer", StringComparison.OrdinalIgnoreCase)) cofferSeen = now;
+
+        UpdateTreasureDuty();
+
         // Inventory can read as empty while the game is still loading; wait it out.
         if (now < settleUntil || loading) return;
 
@@ -199,10 +225,29 @@ public sealed unsafe class Tracker : IDisposable
         MarketBoard: Active(MarketSearch, now) || Active(MarketResults, now),
         Repair: Active(RepairWindow, now),
         Shop: Active(ShopWindow, now) || Active(GearShop, now),
+        RetainerMenu: RetainerWindows.Any(w => Active(w, now)),
         Quest: Active(QuestReward, now),
         Mail: Active(MailWindow, now),
         Teleporting: now - teleportSeen < TeleportGrace,
-        InDuty: condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56]);
+        InDuty: condition[ConditionFlag.BoundByDuty] || condition[ConditionFlag.BoundByDuty56],
+        TreasureDuty: inTreasureDuty,
+        Fate: now - fateSeen < FateGrace,
+        TreasureCoffer: now - cofferSeen < CofferGrace,
+        Housing: HousingWindows.Any(w => Active(w, now)));
+
+    private void UpdateTreasureDuty()
+    {
+        var territory = clientState.TerritoryType;
+        if (territory == treasureCheckedTerritory) return;
+        treasureCheckedTerritory = territory;
+        inTreasureDuty = false;
+
+        if (data.GetExcelSheet<TerritoryType>().TryGetRow(territory, out var row))
+        {
+            var cfc = row.ContentFinderCondition;
+            inTreasureDuty = cfc.RowId != 0 && cfc.IsValid && cfc.Value.ContentType.RowId == TreasureHuntContentType;
+        }
+    }
 
     private bool Active(string window, DateTime now) =>
         windowOpen.Contains(window) || (windowSeen.TryGetValue(window, out var closed) && now - closed < WindowGrace);
