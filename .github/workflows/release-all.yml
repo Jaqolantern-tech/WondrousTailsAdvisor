@@ -56,10 +56,9 @@ jobs:
           name: ${{ steps.tag.outputs.tag }}
           target_commitish: ${{ github.sha }}
           files: ${{ runner.temp }}/out/*.zip
-
-      - name: Update repo.json
-        env:
-          BRANCH: ${{ github.event.repository.default_branch }}
-          TAG: ${{ steps.tag.outputs.tag }}
-        run: |
-          git fetch origin 
+         - name: Update repo.json
+           env:
+             BRANCH: ${{ github.event.repository.default_branch }}
+             TAG: ${{ steps.tag.outputs.tag }}
+           run: |
+             git fetch origin
