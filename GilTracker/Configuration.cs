@@ -15,5 +15,8 @@ public class Configuration : IPluginConfiguration
     /// <summary>Show the list of recent gil changes.</summary>
     public bool ShowRecent { get; set; } = false;
 
+    /// <summary>Window color theme, by name.</summary>
+    public string Theme { get; set; } = global::GilTracker.Theme.DefaultName;
+
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

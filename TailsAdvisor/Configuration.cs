@@ -28,5 +28,8 @@ public class Configuration : IPluginConfiguration
         Version = 2;
     }
 
+    /// <summary>Window color theme, by name.</summary>
+    public string Theme { get; set; } = global::TailsAdvisor.Theme.DefaultName;
+
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

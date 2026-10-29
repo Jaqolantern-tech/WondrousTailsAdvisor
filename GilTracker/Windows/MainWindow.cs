@@ -17,26 +17,28 @@ namespace GilTracker.Windows;
 /// </summary>
 public sealed class MainWindow : Window
 {
-    private static readonly Vector4 Paper = Hex(0xF7EDD6);
-    private static readonly Vector4 PaperDeep = Hex(0xEADBB9);
-    private static readonly Vector4 PaperHover = Hex(0xE2CC9F);
-    private static readonly Vector4 PaperPress = Hex(0xDBC28F);
-    private static readonly Vector4 SlotEdge = Hex(0xCDAE78);
-    private static readonly Vector4 Cover = Hex(0xD8BC86);
-    private static readonly Vector4 CoverEdge = Hex(0xB88E55);
-    private static readonly Vector4 Ink = Hex(0x4A3222);
-    private static readonly Vector4 InkSoft = Hex(0x86694F);
-    private static readonly Vector4 GoldInk = Hex(0x8F6210);
-    private static readonly Vector4 Gold = Hex(0xD9A54A);
-    private static readonly Vector4 GoldLight = Hex(0xF2D28A);
-    private static readonly Vector4 GoldDeep = Hex(0xB07E22);
-    private static readonly Vector4 Teal = Hex(0x2E7D72);
-    private static readonly Vector4 Mint = Hex(0xDDF1EC);
-    private static readonly Vector4 MintEdge = Hex(0x8CC3B8);
-    private static readonly Vector4 Coral = Hex(0xC4502F);
-    private static readonly Vector4 Peach = Hex(0xFBE4D8);
-    private static readonly Vector4 PeachEdge = Hex(0xE3A58E);
-    private static readonly Vector4 White = Hex(0xFFFFFF);
+    private static Theme Th = Theme.All[0];
+
+    private static Vector4 Paper => Theme.V(Th.Background);
+    private static Vector4 PaperDeep => Theme.V(Th.Surface);
+    private static Vector4 PaperHover => Theme.V(Th.SurfaceHover);
+    private static Vector4 PaperPress => Theme.V(Th.SurfacePress);
+    private static Vector4 SlotEdge => Theme.V(Th.Line);
+    private static Vector4 Cover => Theme.V(Th.Header);
+    private static Vector4 CoverEdge => Theme.V(Th.Border);
+    private static Vector4 Ink => Theme.V(Th.Text);
+    private static Vector4 InkSoft => Theme.V(Th.TextSoft);
+    private static Vector4 GoldInk => Theme.V(Th.Money);
+    private static Vector4 Gold => Theme.V(Th.Coin);
+    private static Vector4 GoldLight => Theme.V(Th.CoinLight);
+    private static Vector4 GoldDeep => Theme.V(Th.MoneyPill);
+    private static Vector4 Teal => Theme.V(Th.Good);
+    private static Vector4 Mint => Theme.V(Th.Card);
+    private static Vector4 MintEdge => Theme.V(Th.CardEdge);
+    private static Vector4 Coral => Theme.V(Th.Bad);
+    private static Vector4 Peach => Theme.V(Th.Card2);
+    private static Vector4 PeachEdge => Theme.V(Th.Card2Edge);
+    private static Vector4 White => Theme.V(Th.OnMoneyPill);
 
     private static readonly (Period Period, string Label)[] Periods =
     [
@@ -66,6 +68,7 @@ public sealed class MainWindow : Window
 
     public override void PreDraw()
     {
+        Th = Theme.Get(plugin.Configuration.Theme);
         pushedColors = 0;
         PushColor(ImGuiCol.WindowBg, Paper);
         PushColor(ImGuiCol.PopupBg, Paper);
@@ -79,6 +82,9 @@ public sealed class MainWindow : Window
         PushColor(ImGuiCol.ButtonHovered, PaperHover);
         PushColor(ImGuiCol.ButtonActive, PaperPress);
         PushColor(ImGuiCol.Separator, SlotEdge);
+        PushColor(ImGuiCol.Header, PaperDeep);
+        PushColor(ImGuiCol.HeaderHovered, PaperHover);
+        PushColor(ImGuiCol.HeaderActive, PaperPress);
 
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 12f * S);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 2f * S);
@@ -361,6 +367,9 @@ public sealed class MainWindow : Window
             config.ShowRecent = !config.ShowRecent;
             config.Save();
         }
+
+        ImGui.SameLine(ImGui.GetStyle().WindowPadding.X + ContentWidth - 140f * S);
+        DrawThemePicker(config);
     }
 
     private static void DrawRecent(Ledger ledger)
@@ -387,6 +396,28 @@ public sealed class MainWindow : Window
         }
     }
 
+    // Theme picker
+
+    private void DrawThemePicker(Configuration config)
+    {
+        ImGui.SetNextItemWidth(140f * S);
+        using (var combo = ImRaii.Combo("##theme", Th.Name))
+        {
+            if (combo.Success)
+            {
+                foreach (var t in Theme.All)
+                {
+                    if (ImGui.Selectable(t.Name, t.Name == Th.Name))
+                    {
+                        config.Theme = t.Name;
+                        config.Save();
+                    }
+                }
+            }
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Theme");
+    }
+
     // Helpers
 
     private static void DottedRule()
@@ -402,10 +433,10 @@ public sealed class MainWindow : Window
 
     private static void DrawCoin(ImDrawListPtr dl, Vector2 c, float r)
     {
-        dl.AddCircleFilled(c, r, ImGui.GetColorU32(GoldDeep));
+        dl.AddCircleFilled(c, r, ImGui.GetColorU32(Theme.V(Th.CoinDeep)));
         dl.AddCircleFilled(c, r * 0.82f, ImGui.GetColorU32(Gold));
         dl.AddCircleFilled(c + new Vector2(-r * 0.3f, -r * 0.3f), r * 0.22f, ImGui.GetColorU32(GoldLight));
-        dl.AddCircle(c, r * 0.55f, ImGui.GetColorU32(GoldDeep), 0, 1.2f * S);
+        dl.AddCircle(c, r * 0.55f, ImGui.GetColorU32(Theme.V(Th.CoinDeep)), 0, 1.2f * S);
     }
 
     /// <summary>Short form for display: 98,500 then 345K, 2.45M, 12.3M, 1.23B. Rounds down so it never overstates.</summary>
@@ -436,9 +467,4 @@ public sealed class MainWindow : Window
         return $"{(int)t.TotalDays}d ago";
     }
 
-    private static Vector4 Hex(uint rgb) => new(
-        ((rgb >> 16) & 0xFF) / 255f,
-        ((rgb >> 8) & 0xFF) / 255f,
-        (rgb & 0xFF) / 255f,
-        1f);
 }

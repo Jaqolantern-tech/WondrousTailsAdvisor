@@ -16,25 +16,27 @@ namespace TailsAdvisor.Windows;
 public sealed class MainWindow : Window
 {
     // Journal palette
-    private static readonly Vector4 Paper = Hex(0xF7EDD6);
-    private static readonly Vector4 PaperDeep = Hex(0xEADBB9);
-    private static readonly Vector4 PaperHover = Hex(0xE2CC9F);
-    private static readonly Vector4 PaperPress = Hex(0xDBC28F);
-    private static readonly Vector4 SlotEdge = Hex(0xCDAE78);
-    private static readonly Vector4 Cover = Hex(0xD8BC86);
-    private static readonly Vector4 CoverEdge = Hex(0xB88E55);
-    private static readonly Vector4 Ink = Hex(0x4A3222);
-    private static readonly Vector4 InkSoft = Hex(0x86694F);
-    private static readonly Vector4 Coral = Hex(0xD2553A);
-    private static readonly Vector4 Sticker = Hex(0xE8873A);
-    private static readonly Vector4 StickerRim = Hex(0xFFF6E4);
-    private static readonly Vector4 Mint = Hex(0xDDF1EC);
-    private static readonly Vector4 MintEdge = Hex(0x8CC3B8);
-    private static readonly Vector4 MintDeep = Hex(0xC7E6DF);
-    private static readonly Vector4 Teal = Hex(0x2E7D72);
-    private static readonly Vector4 Amber = Hex(0xB86E14);
-    private static readonly Vector4 Gold = Hex(0xD9A54A);
-    private static readonly Vector4 White = Hex(0xFFFFFF);
+    private static Theme Th = Theme.All[0];
+
+    private static Vector4 Paper => Theme.V(Th.Background);
+    private static Vector4 PaperDeep => Theme.V(Th.Surface);
+    private static Vector4 PaperHover => Theme.V(Th.SurfaceHover);
+    private static Vector4 PaperPress => Theme.V(Th.SurfacePress);
+    private static Vector4 SlotEdge => Theme.V(Th.Line);
+    private static Vector4 Cover => Theme.V(Th.Header);
+    private static Vector4 CoverEdge => Theme.V(Th.Border);
+    private static Vector4 Ink => Theme.V(Th.Text);
+    private static Vector4 InkSoft => Theme.V(Th.TextSoft);
+    private static Vector4 Coral => Theme.V(Th.Accent);
+    private static Vector4 Sticker => Theme.V(Th.Sticker);
+    private static Vector4 StickerRim => Theme.V(Th.StickerRim);
+    private static Vector4 Mint => Theme.V(Th.Card);
+    private static Vector4 MintEdge => Theme.V(Th.CardEdge);
+    private static Vector4 MintDeep => Theme.V(Th.CardDeep);
+    private static Vector4 Teal => Theme.V(Th.Good);
+    private static Vector4 Amber => Theme.V(Th.Warn);
+    private static Vector4 Gold => Theme.V(Th.Star);
+    private static Vector4 White => Theme.V(Th.OnAccent);
 
     private static readonly string[] GoalTabs = ["Any line", "2 lines", "Jackpot"];
 
@@ -58,6 +60,7 @@ public sealed class MainWindow : Window
 
     public override void PreDraw()
     {
+        Th = Theme.Get(plugin.Configuration.Theme);
         pushedColors = 0;
         PushColor(ImGuiCol.WindowBg, Paper);
         PushColor(ImGuiCol.PopupBg, Paper);
@@ -75,6 +78,9 @@ public sealed class MainWindow : Window
         PushColor(ImGuiCol.ButtonHovered, PaperHover);
         PushColor(ImGuiCol.ButtonActive, PaperPress);
         PushColor(ImGuiCol.Separator, SlotEdge);
+        PushColor(ImGuiCol.Header, PaperDeep);
+        PushColor(ImGuiCol.HeaderHovered, PaperHover);
+        PushColor(ImGuiCol.HeaderActive, PaperPress);
 
         pushedVars = 0;
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 12f * S);
@@ -151,18 +157,18 @@ public sealed class MainWindow : Window
         var dl = ImGui.GetWindowDrawList();
 
         using (plugin.TitleFont.Push())
-        using (ImRaii.PushColor(ImGuiCol.Text, Coral))
+        using (ImRaii.PushColor(ImGuiCol.Text, Theme.V(Th.Title)))
             ImGui.TextUnformatted("Wondrous Tails");
 
         var min = ImGui.GetItemRectMin();
         var max = ImGui.GetItemRectMax();
         var cy = (min.Y + max.Y) / 2f;
         DrawStar(dl, new Vector2(max.X + 14f * S, cy - 3f * S), 7f * S, Gold);
-        DrawStar(dl, new Vector2(max.X + 27f * S, cy + 4f * S), 4f * S, Hex(0xE9C57A));
+        DrawStar(dl, new Vector2(max.X + 27f * S, cy + 4f * S), 4f * S, Theme.V(Th.StarLight));
 
         if (journal is { HasJournal: true, Expired: false, ExpiresUtc: { } exp })
         {
-            using (ImRaii.PushColor(ImGuiCol.Text, Coral))
+            using (ImRaii.PushColor(ImGuiCol.Text, Theme.V(Th.Title)))
                 ImGui.TextUnformatted($"Deadline: {exp.ToLocalTime():ddd MMM d, h:mm tt}");
         }
 
@@ -335,6 +341,9 @@ public sealed class MainWindow : Window
             config.Save();
         }
 
+        ImGui.Dummy(new Vector2(0, 2f * S));
+        DrawThemePicker(config);
+
         ImGui.EndGroup();
     }
 
@@ -495,6 +504,28 @@ public sealed class MainWindow : Window
             ? " Heads up: this breaks up the line you already have."
             : string.Empty;
 
+    // Theme picker
+
+    private void DrawThemePicker(Configuration config)
+    {
+        ImGui.SetNextItemWidth(140f * S);
+        using (var combo = ImRaii.Combo("##theme", Th.Name))
+        {
+            if (combo.Success)
+            {
+                foreach (var t in Theme.All)
+                {
+                    if (ImGui.Selectable(t.Name, t.Name == Th.Name))
+                    {
+                        config.Theme = t.Name;
+                        config.Save();
+                    }
+                }
+            }
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Theme");
+    }
+
     // Drawing helpers
 
     private static void DottedRule()
@@ -536,9 +567,4 @@ public sealed class MainWindow : Window
         return $"{p * 100:0}%";
     }
 
-    private static Vector4 Hex(uint rgb) => new(
-        ((rgb >> 16) & 0xFF) / 255f,
-        ((rgb >> 8) & 0xFF) / 255f,
-        (rgb & 0xFF) / 255f,
-        1f);
 }
