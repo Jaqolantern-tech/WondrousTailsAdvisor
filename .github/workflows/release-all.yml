@@ -66,4 +66,11 @@ jobs:
             if [ "$name" = "TailsAdvisor" ]; then icon="icon.png"; else icon="$(echo "$name" | tr 'A-Z' 'a-z')-icon.png"; fi
             DL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${name}.zip"
             ICON="https://raw.githubusercontent.com/${{ github.repository }}/${BRANCH}/images/${icon}"
-            jq
+            jq --arg dl "$DL" --arg icon "$ICON" --argjson now "$NOW" '. + {DownloadLinkInstall: $dl, DownloadLinkUpdate: $dl, DownloadLinkTesting: $dl, IconUrl: $icon, IsHide: false, IsTestingExclusive: false, LastUpdate: $now}' "$f" > "$RUNNER_TEMP/entry-$name.json"
+          done
+          jq -s '.' "$RUNNER_TEMP"/entry-*.json > repo.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add repo.json
+          git commit -m "Update repo.json for ${TAG}" || echo "repo.json unchanged"
+          git push origin "$BRANCH"
