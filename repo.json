@@ -1,0 +1,33 @@
+[
+  {
+    "Author": "Day Moonlight",
+    "Name": "Wondrous Tails Advisor",
+    "InternalName": "TailsAdvisor",
+    "AssemblyVersion": "1.0.0.0",
+    "Description": "Reads your Wondrous Tails journal and works out the optimal Shuffle plan for the Second Chance points you have. Shows your odds of 1, 2, and 3 lines, colors each open square by how lucky a landing there would be, and gives a clear Shuffle now or Hold call. Pick your goal (any line, two lines, or the three line jackpot), keep points in reserve for Retry, and test boards by hand in Planner mode. Open it with /wta.",
+    "ApplicableVersion": "any",
+    "RepoUrl": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor",
+    "Tags": [
+      "wondrous tails",
+      "khloe",
+      "journal",
+      "shuffle",
+      "second chance",
+      "weekly"
+    ],
+    "DalamudApiLevel": 15,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": false,
+    "LoadPriority": 0,
+    "Punchline": "Tells you when to Shuffle your Wondrous Tails journal and when to hold.",
+    "AcceptsFeedback": true,
+    "DownloadLinkInstall": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/v1.0.0/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/v1.0.0/latest.zip",
+    "DownloadLinkTesting": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/v1.0.0/latest.zip",
+    "IconUrl": "https://raw.githubusercontent.com/Jaqolantern-tech/WondrousTailsAdvisor/main/images/icon.png",
+    "IsHide": false,
+    "IsTestingExclusive": false,
+    "LastUpdate": 1793236059
+  }
+]
