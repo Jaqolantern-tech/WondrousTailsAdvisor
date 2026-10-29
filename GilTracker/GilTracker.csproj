@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <!-- Bump this to ship an update. The release workflow builds every plugin at its own version. -->
+    <Version>1.0.0.0</Version>
+    <AssemblyName>GilTracker</AssemblyName>
+    <RootNamespace>GilTracker</RootNamespace>
+
+    <!-- Plugin manifest fields, shown in /xlplugins -->
+    <Author>Edualc</Author>
+    <Name>Gil Tracker</Name>
+    <Punchline>See how much gil you make and spend, and exactly where it comes from.</Punchline>
+    <Description>A merchant's ledger for your wallet. Tracks the gil you earn and spend by source (market board sales, vendors, duties, quests, trades, repairs, teleports and more) for this session, today, the last 7 days, and all time, with a 14 day chart and a gil per hour rate. Market board sales are counted when you visit a summoning bell. Open it with /gil.</Description>
+    <Tags>gil;money;market board;retainers;tracker;income</Tags>
+    <RepoUrl>https://github.com/</RepoUrl>
+  </PropertyGroup>
+</Project>

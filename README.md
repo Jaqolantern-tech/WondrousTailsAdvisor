@@ -1,3 +1,7 @@
+# Edualc's FFXIV Plugins
+
+Two Dalamud plugins served from one custom repository: **Wondrous Tails Advisor** and **Gil Tracker**.
+
 # Wondrous Tails Advisor
 
 A Dalamud plugin that tells you when to **Shuffle** your Wondrous Tails journal and when to **Hold**.
@@ -27,13 +31,27 @@ Quick facts it reproduces: with no shuffles, a blank journal has a 58.5% chance 
 
 The plan assumes you earn no new Second Chance points during the week, so it is slightly cautious.
 
+
+# Gil Tracker
+
+A merchant's ledger for your wallet. Open it with `/gil`.
+
+* **Up or down:** your net gil for this session, today, the last 7 days, or all time, plus a gil per hour rate for the session.
+* **Where it came from:** market board sales, vendor sales, duties and loot, quests and leves, trades, mail, and everything else.
+* **Where it went:** market board buys, vendor shopping, repairs, teleports, and more.
+* **Last 14 days:** a small chart of each day's net, and an optional feed of recent changes.
+
+How it decides the source: it watches which game window is open when your gil changes (a shop, the market board, the repair menu, a quest reward, a trade) and whether you're in a duty or teleporting. Moving gil to or from a retainer or the company chest is ignored, since it isn't earning or spending.
+
+Market board sales land in your retainers' wallets, so they're counted when you open a summoning bell. Visit one once to set the starting point. History is saved per character in the plugin's config folder.
+
 ## Publish it as your own custom repository
 
 You only do this once. After that, new versions take one click.
 
 1. **Create a repo.** On GitHub, create a new **public** repository, for example `WondrousTailsAdvisor`. It must be public so Dalamud can download from it.
 2. **Upload the files.** Upload everything in this folder, keeping the structure. Make sure the hidden `.github` folder comes along (GitHub's web uploader accepts it if you drag the whole folder in; `git push` also works).
-3. **Run the release.** Go to the **Actions** tab, choose **Release**, click **Run workflow**, enter `1.0.0`, and run it. In about 2 minutes it builds the plugin, attaches it to a GitHub Release, and writes `repo.json` to your main branch.
+3. **Run the release.** Go to the **Actions** tab, choose **Release all plugins**, and click **Run workflow**. In about 2 minutes it builds every plugin, attaches them to a GitHub Release, and writes `repo.json` to your main branch.
 4. **Add the repo in game.** Type `/xlsettings`, open **Experimental**, and under **Custom Plugin Repositories** paste:
 
    ```
@@ -41,13 +59,11 @@ You only do this once. After that, new versions take one click.
    ```
 
    Tick the box next to it and click **Save**.
-5. **Install.** Type `/xlplugins`, search **Wondrous Tails Advisor**, and install.
+5. **Install.** Type `/xlplugins`, search **Wondrous Tails Advisor** or **Gil Tracker**, and install.
 
 ### Shipping an update
 
-Change the code, push it, then run the **Release** workflow again with a higher version (1.0.1, 1.1.0, and so on). Dalamud picks up the new version on its next update check.
-
-Every push also runs the **Build** workflow, which compiles the plugin and uploads a test zip as an artifact, so you see a green check before releasing.
+Change the code, raise the `<Version>` in that plugin's `.csproj` (for example 1.0.0.0 to 1.0.1.0), push it, then run **Release all plugins** again. Dalamud only offers an update for plugins whose version went up.
 
 ## First run check
 

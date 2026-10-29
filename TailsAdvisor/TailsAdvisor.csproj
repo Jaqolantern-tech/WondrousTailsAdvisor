@@ -2,12 +2,12 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
     <!-- The release workflow overrides Version from the git tag (v1.2.3 becomes 1.2.3.0). -->
-    <Version>1.1.0.0</Version>
+    <Version>1.1.1.0</Version>
     <AssemblyName>TailsAdvisor</AssemblyName>
     <RootNamespace>TailsAdvisor</RootNamespace>
 
     <!-- Plugin manifest fields, shown in /xlplugins -->
-    <Author>Day Moonlight</Author>
+    <Author>Edualc</Author>
     <Name>Wondrous Tails Advisor</Name>
     <Punchline>Your Wondrous Tails buddy: tells you when to shake up your journal and when to keep stamping.</Punchline>
     <Description>A little sticker book helper for Khloe's journal. Pick your goal (any line, two lines, or the jackpot) and it reads your journal to give you one clear call: Keep stamping, Shake it up, Grab more points, or Off to Khloe, with a one line reason using your real odds. Open it with /wta or just open your journal.</Description>
