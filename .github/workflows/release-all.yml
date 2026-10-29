@@ -1,0 +1,65 @@
+name: Release all plugins
+
+# Builds every plugin folder in this repo (any folder holding a .csproj), attaches them to one
+# GitHub Release, and rewrites repo.json so Dalamud lists all of them.
+# To ship an update, bump <Version> in that plugin's .csproj first, then run this.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      DALAMUD_HOME: ${{ github.workspace }}/.dalamud
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Download Dalamud
+        run: |
+          mkdir -p "$DALAMUD_HOME"
+          curl -fsSL -o dalamud.zip https://goatcorp.github.io/dalamud-distrib/latest.zip
+          unzip -q -o dalamud.zip -d "$DALAMUD_HOME"
+
+      - name: Build every plugin
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          for proj in */*.csproj; do
+            name=$(basename "$proj" .csproj)
+            echo "Building $name"
+            dotnet build "$proj" -c Release -p:RepoUrl=https://github.com/${{ github.repository }} -p:EnableWindowsTargeting=true
+            zip=$(find "$(dirname "$proj")/bin" -path '*Release*' -name latest.zip | head -n 1)
+            if [ -z "$zip" ]; then echo "No package for $name"; exit 1; fi
+            cp "$zip" "$RUNNER_TEMP/out/$name.zip"
+            cp "$(dirname "$zip")/$name.json" "$RUNNER_TEMP/out/$name.json"
+          done
+          ls -la "$RUNNER_TEMP/out"
+
+      - name: Pick a release tag
+        id: tag
+        run: echo "tag=release-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: ${{ runner.temp }}/out/*.zip
+
+      - name: Update repo.json
+        env:
+          BRANCH: ${{ github.event.repository.default_branch }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          git fetch origin 
