@@ -41,7 +41,7 @@ You only do this once. After that, new versions take one click.
 4. **Add the repo in game.** Type `/xlsettings`, open **Experimental**, and under **Custom Plugin Repositories** paste:
 
    ```
-   (https://raw.githubusercontent.com/Jaqolantern-tech/WondrousTailsAdvisor/main/repo.json)
+   https://raw.githubusercontent.com/Jaqolantern-tech/WondrousTailsAdvisor/main/repo.json
    ```
 
    Tick the box next to it and click **Save**.
