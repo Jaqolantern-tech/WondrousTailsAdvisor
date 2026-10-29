@@ -7,7 +7,6 @@ public enum Goal
     AnyLine = 0,
     TwoLines = 1,
     ThreeLines = 2,
-    MostLines = 3,
 }
 
 /// <summary>
@@ -47,10 +46,9 @@ public sealed class ShufflePolicy
 
     public static double Reward(Goal goal, int lines) => goal switch
     {
-        Goal.AnyLine => lines >= 1 ? 1 : 0,
         Goal.TwoLines => lines >= 2 ? 1 : 0,
         Goal.ThreeLines => lines >= 3 ? 1 : 0,
-        _ => Math.Min(lines, 3),
+        _ => lines >= 1 ? 1 : 0,
     };
 
     /// <summary>Goal value of a finished outcome distribution (exactly 0,1,2,3 lines).</summary>

@@ -2,111 +2,146 @@ using System;
 
 namespace TailsAdvisor.Solver;
 
+/// <summary>The four things the advisor can tell you.</summary>
 public enum Verdict
 {
-    Shuffle,
-    Hold,
-    TooFewStickers,
-    TooManyStickers,
-    NotEnoughPoints,
-    Complete,
+    KeepStamping,
+    ShakeItUp,
+    GrabPoints,
+    OffToKhloe,
 }
 
-/// <summary>Everything the window needs for one board, computed off the UI thread.</summary>
+/// <summary>Why the verdict was given; picks the explanation line.</summary>
+public enum Reason
+{
+    TooEarly,
+    GoalOutOfReach,
+    GoodBoard,
+    Locked,
+    ShuffleHelps,
+    NeedPoints,
+    Full,
+}
+
+/// <summary>Everything the window needs for one board.</summary>
 public sealed class Analysis
 {
     public required int Mask { get; init; }
     public required int Stickers { get; init; }
     public required int Points { get; init; }
-    public required int UsablePoints { get; init; }
     public required Goal Goal { get; init; }
-    public required int LinesDone { get; init; }
-    public required int LinesOneAway { get; init; }
-
-    /// <summary>At least 1/2/3 lines if you never shuffle again.</summary>
-    public required double[] NoShuffleOdds { get; init; }
-
-    /// <summary>At least 1/2/3 lines if you hold now and follow the plan afterwards.</summary>
-    public required double[] HoldOdds { get; init; }
-
-    /// <summary>At least 1/2/3 lines if you shuffle now and follow the plan afterwards. Null when shuffling is not possible.</summary>
-    public required double[]? ShuffleOdds { get; init; }
-
-    public required double HoldValue { get; init; }
-    public required double? ShuffleValue { get; init; }
     public required Verdict Verdict { get; init; }
+    public required Reason Reason { get; init; }
+    public required int LinesDone { get; init; }
 
-    /// <summary>Per square: goal value under the plan if the next sticker lands there. NaN for filled squares.</summary>
-    public required double[] CellValue { get; init; }
+    /// <summary>Points still needed to afford a shuffle (GrabPoints only).</summary>
+    public required int PointsNeeded { get; init; }
 
-    /// <summary>Per square: at least 1/2/3 lines under the plan if the next sticker lands there. Null for filled squares.</summary>
-    public required double[]?[] CellOdds { get; init; }
+    /// <summary>Chance of the goal if you keep this board.</summary>
+    public required double KeepChance { get; init; }
+
+    /// <summary>Chance of the goal if you use your shuffles now. Null when a shuffle is not possible.</summary>
+    public required double? ShuffleChance { get; init; }
+
+    /// <summary>At least 1/2/3 lines if you keep this board (for "Show the math").</summary>
+    public required double[] KeepOdds { get; init; }
+
+    /// <summary>At least 1/2/3 lines if you shuffle now (for "Show the math"). Null when not possible.</summary>
+    public required double[]? ShuffleOdds { get; init; }
 }
 
 public static class Advisor
 {
-    public static Analysis Analyze(ShufflePolicy policy, int mask, int points, int reservePoints)
+    public static Analysis Analyze(ShufflePolicy policy, int mask, int points)
     {
-        var stickers = TailsMath.Count(mask);
-        var usable = Math.Clamp(points - reservePoints, 0, TailsMath.MaxSecondChancePoints);
-
-        // Boards with more than 9 stickers cannot exist; clamp defensively.
-        if (stickers > TailsMath.MaxStickers) stickers = TailsMath.MaxStickers;
+        var goal = policy.Goal;
+        var k = Math.Min(TailsMath.Count(mask), TailsMath.MaxStickers);
+        points = Math.Clamp(points, 0, TailsMath.MaxSecondChancePoints);
 
         var ns = TailsMath.NoShuffleDist.AsSpan(mask * 4, 4);
-        var noShuffle = TailsMath.AtLeast(ns[0], ns[1], ns[2], ns[3]);
+        var keepOdds = TailsMath.AtLeast(ns[0], ns[1], ns[2], ns[3]);
+        var keepChance = GoalChance(goal, keepOdds);
 
-        var hold = policy.HoldNow(mask, usable);
+        // At 7 stickers, judge the shuffle as if you could afford one, so we can say
+        // "grab more points" when it would help.
+        double? shuffleChance = null;
         double[]? shuffleOdds = null;
-        double? shuffleValue = null;
-
-        if (TailsMath.CanShuffleAt(stickers) && usable >= TailsMath.ShuffleCost)
+        var budget = Math.Max(points, TailsMath.ShuffleCost);
+        if (TailsMath.CanShuffleAt(k))
         {
-            var s = policy.ShuffleNow(mask, usable);
-            shuffleValue = s.Value;
+            var s = policy.ShuffleNow(mask, budget);
             shuffleOdds = TailsMath.AtLeast(s.Dist[0], s.Dist[1], s.Dist[2], s.Dist[3]);
+            shuffleChance = GoalChance(goal, shuffleOdds);
         }
 
         Verdict verdict;
-        if (stickers >= TailsMath.MaxStickers) verdict = Verdict.Complete;
-        else if (stickers < TailsMath.MinShuffleStickers) verdict = Verdict.TooFewStickers;
-        else if (stickers > TailsMath.MaxShuffleStickers) verdict = Verdict.TooManyStickers;
-        else if (usable < TailsMath.ShuffleCost) verdict = Verdict.NotEnoughPoints;
-        else verdict = policy.ShouldShuffle(mask, usable) ? Verdict.Shuffle : Verdict.Hold;
+        Reason reason;
+        var needed = 0;
 
-        var cellValue = new double[TailsMath.Cells];
-        var cellOdds = new double[]?[TailsMath.Cells];
-        for (var bit = 0; bit < TailsMath.Cells; bit++)
+        if (k >= TailsMath.MaxStickers)
         {
-            if ((mask & (1 << bit)) != 0 || stickers >= TailsMath.MaxStickers)
+            verdict = Verdict.OffToKhloe;
+            reason = Reason.Full;
+        }
+        else if (k > TailsMath.MaxShuffleStickers)
+        {
+            verdict = Verdict.KeepStamping;
+            reason = Reason.Locked;
+        }
+        else if (k == TailsMath.MaxShuffleStickers && policy.ShouldShuffle(mask, budget))
+        {
+            if (points >= TailsMath.ShuffleCost)
             {
-                cellValue[bit] = double.NaN;
-                continue;
+                verdict = Verdict.ShakeItUp;
+                reason = Reason.ShuffleHelps;
             }
+            else
+            {
+                verdict = Verdict.GrabPoints;
+                reason = Reason.NeedPoints;
+                needed = TailsMath.ShuffleCost - points;
+            }
+        }
+        else if (k == TailsMath.MaxShuffleStickers)
+        {
+            verdict = Verdict.KeepStamping;
+            reason = Reason.GoodBoard;
+        }
+        else
+        {
+            // Before 7 the optimal plan never shuffles: a shuffle at 7 rerolls everything anyway.
+            verdict = Verdict.KeepStamping;
+            reason = keepChance <= 0 ? Reason.GoalOutOfReach : Reason.TooEarly;
+        }
 
-            var child = mask | (1 << bit);
-            cellValue[bit] = policy.Value(child, usable);
-            var d = policy.Dist(child, usable);
-            cellOdds[bit] = TailsMath.AtLeast(d[0], d[1], d[2], d[3]);
+        // Before 7, "shuffle now" odds are not a real option worth showing.
+        if (k < TailsMath.MaxShuffleStickers)
+        {
+            shuffleOdds = null;
+            shuffleChance = null;
         }
 
         return new Analysis
         {
             Mask = mask,
-            Stickers = stickers,
+            Stickers = k,
             Points = points,
-            UsablePoints = usable,
-            Goal = policy.Goal,
-            LinesDone = TailsMath.CompletedLines(mask),
-            LinesOneAway = TailsMath.LinesOneAway(mask),
-            NoShuffleOdds = noShuffle,
-            HoldOdds = TailsMath.AtLeast(hold.Dist[0], hold.Dist[1], hold.Dist[2], hold.Dist[3]),
-            ShuffleOdds = shuffleOdds,
-            HoldValue = hold.Value,
-            ShuffleValue = shuffleValue,
+            Goal = goal,
             Verdict = verdict,
-            CellValue = cellValue,
-            CellOdds = cellOdds,
+            Reason = reason,
+            LinesDone = TailsMath.CompletedLines(mask),
+            PointsNeeded = needed,
+            KeepChance = keepChance,
+            ShuffleChance = shuffleChance,
+            KeepOdds = keepOdds,
+            ShuffleOdds = shuffleOdds,
         };
     }
+
+    private static double GoalChance(Goal goal, double[] atLeast) => goal switch
+    {
+        Goal.TwoLines => atLeast[1],
+        Goal.ThreeLines => atLeast[2],
+        _ => atLeast[0],
+    };
 }

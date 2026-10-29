@@ -14,7 +14,7 @@ public sealed class AdvisorService : IDisposable
     private ShufflePolicy? policy;
     private Task? building;
     private Goal buildingGoal;
-    private (int Mask, int Points, int Reserve, Goal Goal)? lastKey;
+    private (int Mask, int Points, Goal Goal)? lastKey;
     private volatile Analysis? latest;
     private int disposed;
 
@@ -29,11 +29,11 @@ public sealed class AdvisorService : IDisposable
     }
 
     /// <summary>Call whenever the board or settings may have changed. Cheap when nothing changed.</summary>
-    public void Request(int mask, int points, int reserve, Goal goal)
+    public void Request(int mask, int points, Goal goal)
     {
         if (Volatile.Read(ref disposed) != 0) return;
 
-        var key = (mask, points, reserve, goal);
+        var key = (mask, points, goal);
         lock (gate)
         {
             if (lastKey.HasValue && lastKey.Value.Equals(key) && latest != null) return;
@@ -41,7 +41,7 @@ public sealed class AdvisorService : IDisposable
             if (policy != null && policy.Goal == goal)
             {
                 lastKey = key;
-                latest = Advisor.Analyze(policy, mask, points, reserve);
+                latest = Advisor.Analyze(policy, mask, points);
                 return;
             }
 

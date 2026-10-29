@@ -9,408 +9,536 @@ using TailsAdvisor.Solver;
 
 namespace TailsAdvisor.Windows;
 
+/// <summary>
+/// The advisor window, styled after Khloe's sticker journal: parchment paper, a coral title,
+/// tan sticker slots, round orange stickers, and a mint card like the journal's reward list.
+/// </summary>
 public sealed class MainWindow : Window
 {
-    private static readonly Vector4 Gold = new(0.86f, 0.66f, 0.18f, 1f);
-    private static readonly Vector4 GoldHover = new(0.93f, 0.74f, 0.26f, 1f);
-    private static readonly Vector4 Ink = new(0.08f, 0.06f, 0.02f, 1f);
-    private static readonly Vector4 Bad = new(0.58f, 0.20f, 0.20f, 1f);
-    private static readonly Vector4 Mid = new(0.62f, 0.52f, 0.18f, 1f);
-    private static readonly Vector4 Good = new(0.20f, 0.56f, 0.28f, 1f);
-    private static readonly Vector4 Neutral = new(0.30f, 0.32f, 0.36f, 1f);
-    private static readonly Vector4 ShuffleBlue = new(0.40f, 0.72f, 1.00f, 1f);
-    private static readonly Vector4 HoldGreen = new(0.45f, 0.90f, 0.50f, 1f);
-    private static readonly Vector4 Muted = new(0.70f, 0.70f, 0.72f, 1f);
+    // Journal palette
+    private static readonly Vector4 Paper = Hex(0xF7EDD6);
+    private static readonly Vector4 PaperDeep = Hex(0xEADBB9);
+    private static readonly Vector4 PaperHover = Hex(0xE2CC9F);
+    private static readonly Vector4 PaperPress = Hex(0xDBC28F);
+    private static readonly Vector4 SlotEdge = Hex(0xCDAE78);
+    private static readonly Vector4 Cover = Hex(0xD8BC86);
+    private static readonly Vector4 CoverEdge = Hex(0xB88E55);
+    private static readonly Vector4 Ink = Hex(0x4A3222);
+    private static readonly Vector4 InkSoft = Hex(0x86694F);
+    private static readonly Vector4 Coral = Hex(0xD2553A);
+    private static readonly Vector4 Sticker = Hex(0xE8873A);
+    private static readonly Vector4 StickerRim = Hex(0xFFF6E4);
+    private static readonly Vector4 Mint = Hex(0xDDF1EC);
+    private static readonly Vector4 MintEdge = Hex(0x8CC3B8);
+    private static readonly Vector4 MintDeep = Hex(0xC7E6DF);
+    private static readonly Vector4 Teal = Hex(0x2E7D72);
+    private static readonly Vector4 Amber = Hex(0xB86E14);
+    private static readonly Vector4 Gold = Hex(0xD9A54A);
+    private static readonly Vector4 White = Hex(0xFFFFFF);
 
-    private static readonly string[] GoalNames =
-    [
-        "At least one line",
-        "Two or more lines",
-        "Three lines (jackpot)",
-        "Most lines on average",
-    ];
+    private static readonly string[] GoalTabs = ["Any line", "2 lines", "Jackpot"];
+
+    private const float BaseWidth = 340f;
 
     private readonly Plugin plugin;
-
-    private bool plannerMode;
-    private int plannerMask;
-    private int plannerPoints = 4;
+    private int pushedColors;
+    private int pushedVars;
 
     public MainWindow(Plugin plugin)
-        : base("Wondrous Tails Advisor###TailsAdvisorMain", ImGuiWindowFlags.AlwaysAutoResize)
+        : base("###TailsAdvisorMain",
+            ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoCollapse)
     {
         this.plugin = plugin;
     }
+
+    private static float S => ImGuiHelpers.GlobalScale;
+    private static float ContentWidth => BaseWidth * S;
+
+    // Window chrome
+
+    public override void PreDraw()
+    {
+        pushedColors = 0;
+        PushColor(ImGuiCol.WindowBg, Paper);
+        PushColor(ImGuiCol.PopupBg, Paper);
+        PushColor(ImGuiCol.TitleBg, Cover);
+        PushColor(ImGuiCol.TitleBgActive, Cover);
+        PushColor(ImGuiCol.TitleBgCollapsed, Cover);
+        PushColor(ImGuiCol.Border, CoverEdge);
+        PushColor(ImGuiCol.Text, Ink);
+        PushColor(ImGuiCol.TextDisabled, InkSoft);
+        PushColor(ImGuiCol.FrameBg, PaperDeep);
+        PushColor(ImGuiCol.FrameBgHovered, PaperHover);
+        PushColor(ImGuiCol.FrameBgActive, PaperPress);
+        PushColor(ImGuiCol.CheckMark, Coral);
+        PushColor(ImGuiCol.Button, PaperDeep);
+        PushColor(ImGuiCol.ButtonHovered, PaperHover);
+        PushColor(ImGuiCol.ButtonActive, PaperPress);
+        PushColor(ImGuiCol.Separator, SlotEdge);
+
+        pushedVars = 0;
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 12f * S);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 2f * S);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(16f, 14f) * S);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 6f * S);
+        pushedVars = 4;
+    }
+
+    public override void PostDraw()
+    {
+        ImGui.PopStyleVar(pushedVars);
+        ImGui.PopStyleColor(pushedColors);
+        pushedVars = 0;
+        pushedColors = 0;
+    }
+
+    private void PushColor(ImGuiCol col, Vector4 value)
+    {
+        ImGui.PushStyleColor(col, value);
+        pushedColors++;
+    }
+
+    // Main layout
 
     public override void Draw()
     {
         var config = plugin.Configuration;
         var journal = plugin.Journal;
 
-        DrawModeToggle();
+        DrawHeader(journal);
 
-        int mask, points;
-        if (plannerMode)
+        if (journal is null)
         {
-            mask = plannerMask;
-            points = plannerPoints;
-            DrawPlannerControls();
-        }
-        else
-        {
-            if (journal is null)
-            {
-                ImGui.TextWrapped("Log in to read your journal. You can still use Planner mode.");
-                DrawSettings();
-                return;
-            }
-
-            if (!journal.Value.HasJournal)
-            {
-                ImGui.TextWrapped("You do not have a Wondrous Tails journal right now. Pick one up from Khloe Aliapoh in Idyllshire.");
-                ImGui.TextDisabled($"Second Chance points: {journal.Value.SecondChancePoints}");
-                DrawSettings();
-                return;
-            }
-
-            mask = journal.Value.Mask;
-            points = journal.Value.SecondChancePoints;
-        }
-
-        plugin.Advisor.Request(mask, points, config.ReservePoints, config.Goal);
-        var analysis = plugin.Advisor.Latest;
-
-        if (analysis == null || analysis.Mask != mask || analysis.Goal != config.Goal ||
-            analysis.Points != points)
-        {
-            ImGui.TextDisabled("Working out the best plan...");
-            DrawSettings();
+            DrawNote("Hello there!", "Log in to see your journal.");
             return;
         }
 
-        DrawStatus(analysis, plannerMode ? null : journal);
-        ImGui.Spacing();
-        DrawVerdict(analysis, config.Goal);
-        ImGui.Spacing();
-        DrawOddsTable(analysis);
-        ImGui.Spacing();
-        DrawGrid(analysis, config);
-        DrawLegend(config.Goal);
-        ImGui.Spacing();
-        DrawSettings();
-    }
-
-    // Mode and planner
-
-    private void DrawModeToggle()
-    {
-        if (ImGui.RadioButton("My journal", !plannerMode)) plannerMode = false;
-        ImGui.SameLine();
-        if (ImGui.RadioButton("Planner", plannerMode))
+        var j = journal.Value;
+        if (!j.HasJournal)
         {
-            if (!plannerMode && plugin.Journal is { HasJournal: true } j)
-            {
-                plannerMask = j.Mask;
-                plannerPoints = j.SecondChancePoints;
-            }
-            plannerMode = true;
+            DrawNote("No journal yet!", "Pick one up from Khloe Aliapoh in Idyllshire.");
+            return;
         }
-        ImGui.Separator();
-    }
 
-    private void DrawPlannerControls()
-    {
-        ImGui.TextWrapped("Click squares to add or remove stickers and test any board.");
-        ImGui.SetNextItemWidth(160 * ImGuiHelpers.GlobalScale);
-        var p = plannerPoints;
-        if (ImGui.SliderInt("Second Chance points##planner", ref p, 0, TailsMath.MaxSecondChancePoints))
-            plannerPoints = p;
-
-        if (ImGui.Button("Clear board")) plannerMask = 0;
-        ImGui.SameLine();
-        using (ImRaii.Disabled(plugin.Journal is not { HasJournal: true }))
+        if (j.Expired)
         {
-            if (ImGui.Button("Copy my journal") && plugin.Journal is { HasJournal: true } j)
-            {
-                plannerMask = j.Mask;
-                plannerPoints = j.SecondChancePoints;
-            }
+            DrawNote("This one's past due!", "Khloe has a fresh journal waiting for you in Idyllshire.");
+            return;
         }
-        ImGui.Spacing();
+
+        DrawGoalTabs(config);
+        ImGui.Dummy(new Vector2(0, 2f * S));
+
+        plugin.Advisor.Request(j.Mask, j.SecondChancePoints, config.Goal);
+        var a = plugin.Advisor.Latest;
+        if (a == null || a.Mask != j.Mask || a.Goal != config.Goal || a.Points != Math.Min(j.SecondChancePoints, TailsMath.MaxSecondChancePoints))
+        {
+            using (ImRaii.PushColor(ImGuiCol.Text, InkSoft))
+                ImGui.TextUnformatted("Reading the stars...");
+            ImGui.Dummy(new Vector2(ContentWidth, 0));
+            return;
+        }
+
+        DrawVerdict(a);
+        ImGui.Dummy(new Vector2(0, 2f * S));
+        DrawFooter(a, config);
+
+        if (config.ShowMath) DrawMath(a, config);
     }
 
-    // Status and verdict
-
-    private static void DrawStatus(Analysis a, JournalSnapshot? journal)
+    private void DrawHeader(JournalSnapshot? journal)
     {
-        ImGui.Text($"Stickers: {a.Stickers} of {TailsMath.MaxStickers}");
-        ImGui.SameLine(170 * ImGuiHelpers.GlobalScale);
-        var reserved = a.Points - a.UsablePoints;
-        ImGui.Text(reserved > 0
-            ? $"Second Chance: {a.Points} ({reserved} reserved)"
-            : $"Second Chance: {a.Points}");
+        var dl = ImGui.GetWindowDrawList();
 
-        ImGui.TextColored(Muted, a.LinesDone > 0
-            ? $"Lines complete: {a.LinesDone}"
-            : $"Lines one sticker away: {a.LinesOneAway}");
+        using (plugin.TitleFont.Push())
+        using (ImRaii.PushColor(ImGuiCol.Text, Coral))
+            ImGui.TextUnformatted("Wondrous Tails");
 
-        if (journal is { } j)
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+        var cy = (min.Y + max.Y) / 2f;
+        DrawStar(dl, new Vector2(max.X + 14f * S, cy - 3f * S), 7f * S, Gold);
+        DrawStar(dl, new Vector2(max.X + 27f * S, cy + 4f * S), 4f * S, Hex(0xE9C57A));
+
+        if (journal is { HasJournal: true, Expired: false, ExpiresUtc: { } exp })
         {
-            if (j.StickersWaiting > 0)
+            using (ImRaii.PushColor(ImGuiCol.Text, Coral))
+                ImGui.TextUnformatted($"Deadline: {exp.ToLocalTime():ddd MMM d, h:mm tt}");
+        }
+
+        DottedRule();
+    }
+
+    private void DrawGoalTabs(Configuration config)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var gap = 6f * S;
+        var size = new Vector2((ContentWidth - 2 * gap) / 3f, 30f * S);
+
+        for (var i = 0; i < GoalTabs.Length; i++)
+        {
+            if (i > 0) ImGui.SameLine(0, gap);
+
+            var pos = ImGui.GetCursorScreenPos();
+            if (ImGui.InvisibleButton($"##goal{i}", size) && (int)config.Goal != i)
             {
-                ImGui.TextColored(Gold, j.StickersWaiting == 1
-                    ? "1 finished objective is waiting for its sticker."
-                    : $"{j.StickersWaiting} finished objectives are waiting for their stickers.");
+                config.Goal = (Goal)i;
+                config.Save();
             }
 
-            if (j.Expired)
-                ImGui.TextColored(Bad, "This journal has expired.");
-            else if (j.ExpiresUtc is { } exp)
-                ImGui.TextDisabled($"Turn in by {exp.ToLocalTime():ddd MMM d, h:mm tt}");
+            var selected = (int)config.Goal == i;
+            var hovered = ImGui.IsItemHovered();
+            var bg = selected ? Coral : hovered ? PaperHover : PaperDeep;
+            var fg = selected ? White : Ink;
+
+            dl.AddRectFilled(pos, pos + size, ImGui.GetColorU32(bg), size.Y / 2f);
+            if (!selected) dl.AddRect(pos, pos + size, ImGui.GetColorU32(SlotEdge), size.Y / 2f, ImDrawFlags.None, 1f * S);
+
+            var text = ImGui.CalcTextSize(GoalTabs[i]);
+            dl.AddText(pos + (size - text) / 2f, ImGui.GetColorU32(fg), GoalTabs[i]);
+
+            if (hovered)
+            {
+                ImGui.SetTooltip(i switch
+                {
+                    0 => "Aim for at least one line.",
+                    1 => "Aim for two lines or more.",
+                    _ => "Aim for all three lines. A long shot!",
+                });
+            }
         }
     }
 
-    private static void DrawVerdict(Analysis a, Goal goal)
+    // Verdict card
+
+    private void DrawVerdict(Analysis a)
     {
-        var goalName = GoalNames[(int)goal].ToLowerInvariant();
-        switch (a.Verdict)
+        var (headline, color, why) = Words(a);
+        var showTip = a.Verdict == Verdict.GrabPoints;
+
+        var dl = ImGui.GetWindowDrawList();
+        var pad = 14f * S;
+        var cw = ContentWidth;
+        var start = ImGui.GetCursorScreenPos();
+        var localLeft = ImGui.GetCursorPosX();
+
+        dl.ChannelsSplit(2);
+        dl.ChannelsSetCurrent(1);
+
+        ImGui.SetCursorScreenPos(start + new Vector2(0, pad));
+        ImGui.Indent(pad);
+        ImGui.PushTextWrapPos(localLeft + cw - pad);
+
+        using (plugin.HeadlineFont.Push())
+        using (ImRaii.PushColor(ImGuiCol.Text, color))
+            ImGui.TextWrapped(headline);
+
+        ImGui.Dummy(new Vector2(0, 2f * S));
+        ImGui.TextWrapped(why);
+
+        if (showTip)
         {
-            case Verdict.Shuffle:
-                Banner("SHUFFLE NOW", ShuffleBlue);
-                ImGui.TextWrapped(
-                    $"Spend {TailsMath.ShuffleCost} Second Chance points. Your odds for {goalName} go from " +
-                    $"{GoalValue(goal, a.HoldValue)} to {GoalValue(goal, a.ShuffleValue ?? 0)}.");
-                break;
+            ImGui.Dummy(new Vector2(0, 4f * S));
+            var tipPad = 10f * S;
+            var tipStart = ImGui.GetCursorScreenPos();
+            ImGui.SetCursorScreenPos(tipStart + new Vector2(0, tipPad));
+            ImGui.Indent(tipPad);
+            ImGui.PushTextWrapPos(localLeft + cw - pad - tipPad);
 
-            case Verdict.Hold:
-                Banner("HOLD", HoldGreen);
-                ImGui.TextWrapped(
-                    $"Keep your stickers. Holding gives {GoalValue(goal, a.HoldValue)} for {goalName}; " +
-                    $"shuffling now gives {GoalValue(goal, a.ShuffleValue ?? 0)}.");
-                break;
+            using (ImRaii.PushColor(ImGuiCol.Text, Teal))
+                ImGui.TextUnformatted("How to get points");
+            TipLine("Run any duty with a party member who is new to it. Each one earns a point.");
+            TipLine("Don't claim sticker 8 yet. Shuffling locks once it's placed.");
 
-            case Verdict.TooFewStickers:
-                Banner("KEEP GOING", HoldGreen);
-                ImGui.TextWrapped($"Shuffle unlocks at {TailsMath.MinShuffleStickers} stickers. Nothing to decide yet.");
-                break;
+            ImGui.PopTextWrapPos();
+            ImGui.Unindent(tipPad);
 
-            case Verdict.TooManyStickers:
-                Banner("FINISH IT OUT", HoldGreen);
-                ImGui.TextWrapped($"Shuffle locks after {TailsMath.MaxShuffleStickers} stickers. Complete your last objective.");
-                break;
+            var tipEnd = new Vector2(start.X + cw - pad, ImGui.GetCursorScreenPos().Y + tipPad - ImGui.GetStyle().ItemSpacing.Y);
+            dl.ChannelsSetCurrent(0);
+            dl.AddRectFilled(tipStart, tipEnd, ImGui.GetColorU32(MintDeep), 8f * S);
+            dl.ChannelsSetCurrent(1);
+            ImGui.SetCursorScreenPos(new Vector2(ImGui.GetCursorScreenPos().X, tipEnd.Y + ImGui.GetStyle().ItemSpacing.Y));
+        }
 
-            case Verdict.NotEnoughPoints:
-                Banner("HOLD", HoldGreen);
-                ImGui.TextWrapped(a.Points >= TailsMath.ShuffleCost
-                    ? "Shuffling would dip into the points you reserved for Retry."
-                    : $"You need {TailsMath.ShuffleCost} Second Chance points to shuffle.");
-                break;
+        ImGui.PopTextWrapPos();
+        ImGui.Unindent(pad);
 
-            case Verdict.Complete:
-                Banner("COMPLETE", Gold);
-                ImGui.TextWrapped("All nine stickers placed. Turn the journal in to Khloe.");
-                break;
+        var bottom = ImGui.GetCursorScreenPos().Y - ImGui.GetStyle().ItemSpacing.Y + pad;
+        var cardMax = new Vector2(start.X + cw, bottom);
+
+        dl.ChannelsSetCurrent(0);
+        dl.AddRectFilled(start, cardMax, ImGui.GetColorU32(Mint), 12f * S);
+        dl.AddRect(start, cardMax, ImGui.GetColorU32(MintEdge), 12f * S, ImDrawFlags.None, 1.5f * S);
+        dl.ChannelsMerge();
+
+        ImGui.SetCursorScreenPos(new Vector2(start.X, bottom));
+        ImGui.Dummy(new Vector2(cw, 0));
+    }
+
+    private static void TipLine(string text)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var pos = ImGui.GetCursorScreenPos();
+        var lineH = ImGui.GetTextLineHeight();
+        dl.AddCircleFilled(pos + new Vector2(4f * S, lineH / 2f), 2.5f * S, ImGui.GetColorU32(Sticker));
+        ImGui.Indent(12f * S);
+        ImGui.TextWrapped(text);
+        ImGui.Unindent(12f * S);
+    }
+
+    // Footer: sticker mirror plus counts
+
+    private void DrawFooter(Analysis a, Configuration config)
+    {
+        var dl = ImGui.GetWindowDrawList();
+        var cell = 20f * S;
+        var gap = 4f * S;
+        var gridSize = new Vector2(cell * 4 + gap * 3, cell * 4 + gap * 3);
+
+        var origin = ImGui.GetCursorScreenPos();
+        for (var row = 0; row < 4; row++)
+        {
+            for (var col = 0; col < 4; col++)
+            {
+                var min = origin + new Vector2(col * (cell + gap), row * (cell + gap));
+                var placed = (a.Mask & (1 << (row * 4 + col))) != 0;
+                DrawSlot(dl, min, cell, placed);
+            }
+        }
+        ImGui.Dummy(gridSize);
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Your journal, as the advisor sees it.");
+
+        ImGui.SameLine(0, 16f * S);
+        ImGui.BeginGroup();
+
+        ImGui.TextUnformatted($"Seals: {a.Stickers} / {TailsMath.MaxStickers}");
+        using (ImRaii.PushColor(ImGuiCol.Text, Teal))
+            ImGui.TextUnformatted($"Second Chance: {a.Points}");
+        if (a.LinesDone > 0)
+        {
+            using (ImRaii.PushColor(ImGuiCol.Text, Coral))
+                ImGui.TextUnformatted(a.LinesDone == 1 ? "1 line done!" : $"{a.LinesDone} lines done!");
+        }
+
+        ImGui.Dummy(new Vector2(0, 2f * S));
+        using (ImRaii.PushColor(ImGuiCol.Text, Coral))
+            ImGui.TextUnformatted(config.ShowMath ? "Hide the math" : "Show the math");
+        if (ImGui.IsItemHovered())
+        {
+            var min = ImGui.GetItemRectMin();
+            var max = ImGui.GetItemRectMax();
+            dl.AddLine(new Vector2(min.X, max.Y), max, ImGui.GetColorU32(Coral), 1f * S);
+        }
+        if (ImGui.IsItemClicked())
+        {
+            config.ShowMath = !config.ShowMath;
+            config.Save();
+        }
+
+        ImGui.EndGroup();
+    }
+
+    private static void DrawSlot(ImDrawListPtr dl, Vector2 min, float size, bool placed)
+    {
+        var max = min + new Vector2(size, size);
+        var round = size * 0.32f;
+        dl.AddRectFilled(min, max, ImGui.GetColorU32(PaperDeep), round);
+        dl.AddRect(min, max, ImGui.GetColorU32(SlotEdge), round, ImDrawFlags.None, 1f * S);
+
+        if (!placed) return;
+
+        var c = (min + max) / 2f;
+        var r = size * 0.47f;
+        dl.AddCircleFilled(c, r, ImGui.GetColorU32(StickerRim));
+        dl.AddCircleFilled(c, r * 0.80f, ImGui.GetColorU32(Sticker));
+        DrawStar(dl, c, r * 0.48f, ImGui.GetColorU32(StickerRim));
+    }
+
+    // Math drawer
+
+    private static void DrawMath(Analysis a, Configuration config)
+    {
+        DottedRule();
+
+        var c1 = 140f * S;
+        var c2 = 205f * S;
+        var c3 = 270f * S;
+
+        using (ImRaii.PushColor(ImGuiCol.Text, InkSoft))
+        {
+            ImGui.TextUnformatted("Chance of");
+            ImGui.SameLine(c1);
+            ImGui.TextUnformatted("1+ line");
+            ImGui.SameLine(c2);
+            ImGui.TextUnformatted("2+ lines");
+            ImGui.SameLine(c3);
+            ImGui.TextUnformatted("3 lines");
+        }
+
+        OddsRow("Keep this board", a.KeepOdds, c1, c2, c3, Ink);
+        if (a.ShuffleOdds != null) OddsRow("Use your shuffles", a.ShuffleOdds, c1, c2, c3, Coral);
+
+        using (ImRaii.PushColor(ImGuiCol.Text, InkSoft))
+        {
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ContentWidth);
+            ImGui.TextWrapped(a.Stickers < TailsMath.MaxShuffleStickers
+                ? "Shuffle odds appear at 7 stickers, the only point where shuffling pays off."
+                : "Shuffle odds assume you shuffle again if the new board is still poor.");
+            ImGui.PopTextWrapPos();
+        }
+
+        ImGui.Dummy(new Vector2(0, 2f * S));
+        var open = config.OpenWithJournal;
+        if (ImGui.Checkbox("Open with the journal", ref open))
+        {
+            config.OpenWithJournal = open;
+            config.Save();
+        }
+
+        var close = config.CloseWithJournal;
+        if (ImGui.Checkbox("Close with the journal", ref close))
+        {
+            config.CloseWithJournal = close;
+            config.Save();
         }
     }
 
-    private static void Banner(string text, Vector4 color)
+    private static void OddsRow(string label, double[] odds, float c1, float c2, float c3, Vector4 color)
     {
+        ImGui.TextUnformatted(label);
         using (ImRaii.PushColor(ImGuiCol.Text, color))
         {
-            ImGui.SetWindowFontScale(1.6f);
-            ImGui.Text(text);
-            ImGui.SetWindowFontScale(1f);
+            ImGui.SameLine(c1);
+            ImGui.TextUnformatted(Pct(odds[0]));
+            ImGui.SameLine(c2);
+            ImGui.TextUnformatted(Pct(odds[1]));
+            ImGui.SameLine(c3);
+            ImGui.TextUnformatted(Pct(odds[2]));
         }
     }
 
-    private static void DrawOddsTable(Analysis a)
+    // A simple card for the no journal cases
+
+    private void DrawNote(string headline, string body)
     {
-        const ImGuiTableFlags flags = ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.RowBg;
-        using var table = ImRaii.Table("##odds", 4, flags);
-        if (!table.Success) return;
+        using (plugin.HeadlineFont.Push())
+        using (ImRaii.PushColor(ImGuiCol.Text, Teal))
+            ImGui.TextUnformatted(headline);
 
-        ImGui.TableSetupColumn("Chance of");
-        ImGui.TableSetupColumn("1+ line");
-        ImGui.TableSetupColumn("2+ lines");
-        ImGui.TableSetupColumn("3 lines");
-        ImGui.TableHeadersRow();
-
-        OddsRow("No more shuffles", a.NoShuffleOdds);
-        if (a.Stickers < TailsMath.MaxStickers)
-        {
-            OddsRow("Hold, follow plan", a.HoldOdds);
-            if (a.ShuffleOdds != null) OddsRow("Shuffle, follow plan", a.ShuffleOdds);
-        }
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ContentWidth);
+        ImGui.TextWrapped(body);
+        ImGui.PopTextWrapPos();
+        ImGui.Dummy(new Vector2(ContentWidth, 0));
     }
 
-    private static void OddsRow(string label, double[] odds)
+    // Words
+
+    private static (string Headline, Vector4 Color, string Why) Words(Analysis a)
     {
-        ImGui.TableNextRow();
-        ImGui.TableNextColumn();
-        ImGui.Text(label);
-        for (var i = 0; i < 3; i++)
+        var goal = a.Goal switch
         {
-            ImGui.TableNextColumn();
-            ImGui.Text(Pct(odds[i]));
-        }
-    }
+            Goal.TwoLines => "2 lines",
+            Goal.ThreeLines => "3 lines",
+            _ => "a line",
+        };
+        var keep = Pct(a.KeepChance);
+        var shuffle = Pct(a.ShuffleChance ?? 0);
 
-    // Grid
-
-    private void DrawGrid(Analysis a, Configuration config)
-    {
-        var size = new Vector2(64, 48) * ImGuiHelpers.GlobalScale;
-
-        // Range of values across open squares, for the heat colors.
-        double min = double.MaxValue, max = double.MinValue;
-        foreach (var v in a.CellValue)
+        switch (a.Verdict)
         {
-            if (double.IsNaN(v)) continue;
-            min = Math.Min(min, v);
-            max = Math.Max(max, v);
-        }
+            case Verdict.ShakeItUp:
+                return ("Shake it up!", Coral,
+                    $"Your stickers could be better placed. Shuffling takes your chance of {goal} from {keep} to {shuffle}. Each shuffle costs 2 Second Chance points."
+                    + LongShot(a) + BreaksLine(a));
 
-        ImGui.TextDisabled(plannerMode
-            ? "Planner board"
-            : "If the next sticker lands here (game picks the square at random):");
+            case Verdict.GrabPoints:
+                return (a.PointsNeeded == 1 ? "Grab 1 more point!" : $"Grab {a.PointsNeeded} more points!", Amber,
+                    $"A shuffle would take your chance of {goal} from {keep} to {shuffle}, but it costs 2 Second Chance points and you have {a.Points}."
+                    + LongShot(a) + BreaksLine(a));
 
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(4, 4) * ImGuiHelpers.GlobalScale))
-        {
-            for (var row = 0; row < 4; row++)
-            {
-                for (var col = 0; col < 4; col++)
+            case Verdict.OffToKhloe:
+                return ("Off to Khloe!", Coral, a.LinesDone switch
                 {
-                    if (col > 0) ImGui.SameLine();
-                    DrawCell(a, config, row * 4 + col, size, min, max);
-                }
-            }
+                    0 => "Your journal is full. Go pick up your prize in Idyllshire!",
+                    1 => "Your journal is full with 1 line. Go pick up your prize in Idyllshire!",
+                    _ => $"Your journal is full with {a.LinesDone} lines. Go pick up your prize in Idyllshire!",
+                });
         }
+
+        // Keep stamping
+        var why = a.Reason switch
+        {
+            Reason.GoalOutOfReach =>
+                $"This board can't make {goal} anymore, but don't worry. A shuffle at 7 stickers resets everything, so save your points for then.",
+            Reason.GoodBoard => a.KeepChance >= 0.9995
+                ? $"You've already locked in {goal}. Don't touch a thing!"
+                : $"Your board looks great. You have a {keep} chance of {goal}, better than a shuffle would give you. Don't touch it!",
+            Reason.Locked => a.KeepChance >= 0.9995
+                ? $"You've locked in {goal}! Grab your last sticker and head to Khloe."
+                : a.KeepChance <= 0
+                    ? "Shuffling is locked now, so this board is set. Finish strong!"
+                    : $"Shuffling is locked now. You have a {keep} chance of {goal}. Finish strong!",
+            _ => a.Stickers < TailsMath.MinShuffleStickers
+                ? "Shuffles unlock at 3 stickers, but they only pay off at 7. Go clear some duties!"
+                : "Save your points for now. Shuffles only pay off at 7 stickers, so check back then.",
+        };
+        return ("Keep stamping!", Teal, why);
     }
 
-    private void DrawCell(Analysis a, Configuration config, int bit, Vector2 size, double min, double max)
+    private static string LongShot(Analysis a) =>
+        a.ShuffleChance is < 0.02
+            ? " It's a long shot either way, so only chase it if you're feeling lucky."
+            : string.Empty;
+
+    private static string BreaksLine(Analysis a) =>
+        a.LinesDone > 0
+            ? " Heads up: this breaks up the line you already have."
+            : string.Empty;
+
+    // Drawing helpers
+
+    private static void DottedRule()
     {
-        var placed = (a.Mask & (1 << bit)) != 0;
-        var value = a.CellValue[bit];
-
-        Vector4 bg;
-        string label;
-        if (placed)
-        {
-            bg = Gold;
-            label = "Sticker";
-        }
-        else if (double.IsNaN(value))
-        {
-            bg = Neutral;
-            label = string.Empty;
-        }
-        else
-        {
-            var t = max - min < 1e-9 ? 0.5f : (float)((value - min) / (max - min));
-            bg = t < 0.5f ? Vector4.Lerp(Bad, Mid, t * 2f) : Vector4.Lerp(Mid, Good, (t - 0.5f) * 2f);
-            label = config.ShowSquareOdds ? GoalValue(config.Goal, value) : string.Empty;
-        }
-
-        bool clicked;
-        using (ImRaii.PushColor(ImGuiCol.Button, bg))
-        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, placed ? GoldHover : bg * 1.15f))
-        using (ImRaii.PushColor(ImGuiCol.ButtonActive, bg))
-        using (ImRaii.PushColor(ImGuiCol.Text, Ink, placed))
-        {
-            clicked = ImGui.Button($"{label}##cell{bit}", size);
-        }
-
-        if (ImGui.IsItemHovered())
-        {
-            if (placed)
-                ImGui.SetTooltip(plannerMode ? "Sticker placed. Click to remove." : "Sticker placed.");
-            else if (a.CellOdds[bit] is { } o)
-                ImGui.SetTooltip(
-                    $"If the next sticker lands here:\n1+ line: {Pct(o[0])}\n2+ lines: {Pct(o[1])}\n3 lines: {Pct(o[2])}" +
-                    (plannerMode ? "\n\nClick to place a sticker." : string.Empty));
-        }
-
-        if (clicked && plannerMode)
-        {
-            if (placed) plannerMask &= ~(1 << bit);
-            else if (TailsMath.Count(plannerMask) < TailsMath.MaxStickers) plannerMask |= 1 << bit;
-        }
+        var dl = ImGui.GetWindowDrawList();
+        var pos = ImGui.GetCursorScreenPos();
+        var y = pos.Y + 4f * S;
+        var col = ImGui.GetColorU32(SlotEdge);
+        for (var x = 2f * S; x < ContentWidth; x += 7f * S)
+            dl.AddCircleFilled(new Vector2(pos.X + x, y), 1.3f * S, col);
+        ImGui.Dummy(new Vector2(ContentWidth, 8f * S));
     }
 
-    private static void DrawLegend(Goal goal)
+    private static void DrawStar(ImDrawListPtr dl, Vector2 center, float radius, Vector4 color) =>
+        DrawStar(dl, center, radius, ImGui.GetColorU32(color));
+
+    private static void DrawStar(ImDrawListPtr dl, Vector2 center, float radius, uint color)
     {
-        ImGui.TextDisabled(goal == Goal.MostLines
-            ? "Squares show expected lines. Green is a lucky landing, red is an unlucky one."
-            : "Squares show your goal odds. Green is a lucky landing, red is an unlucky one.");
+        var inner = radius * 0.45f;
+        for (var i = 0; i < 5; i++)
+        {
+            var a = (-90f + 72f * i) * MathF.PI / 180f;
+            var l = a - 36f * MathF.PI / 180f;
+            var r = a + 36f * MathF.PI / 180f;
+            var tip = center + new Vector2(MathF.Cos(a), MathF.Sin(a)) * radius;
+            var left = center + new Vector2(MathF.Cos(l), MathF.Sin(l)) * inner;
+            var right = center + new Vector2(MathF.Cos(r), MathF.Sin(r)) * inner;
+            dl.AddTriangleFilled(center, left, tip, color);
+            dl.AddTriangleFilled(center, tip, right, color);
+        }
     }
-
-    // Settings
-
-    private void DrawSettings()
-    {
-        var config = plugin.Configuration;
-        if (!ImGui.CollapsingHeader("Settings")) return;
-
-        ImGui.SetNextItemWidth(220 * ImGuiHelpers.GlobalScale);
-        using (var combo = ImRaii.Combo("Goal", GoalNames[(int)config.Goal]))
-        {
-            if (combo.Success)
-            {
-                for (var i = 0; i < GoalNames.Length; i++)
-                {
-                    if (ImGui.Selectable(GoalNames[i], (int)config.Goal == i))
-                    {
-                        config.Goal = (Goal)i;
-                        config.Save();
-                    }
-                }
-            }
-        }
-
-        ImGui.SetNextItemWidth(160 * ImGuiHelpers.GlobalScale);
-        var reserve = config.ReservePoints;
-        if (ImGui.SliderInt("Keep for Retry", ref reserve, 0, TailsMath.MaxSecondChancePoints))
-        {
-            config.ReservePoints = reserve;
-            config.Save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Second Chance points the advisor will never spend on a shuffle.");
-
-        var showOdds = config.ShowSquareOdds;
-        if (ImGui.Checkbox("Show odds on squares", ref showOdds))
-        {
-            config.ShowSquareOdds = showOdds;
-            config.Save();
-        }
-
-        var openWith = config.OpenWithJournal;
-        if (ImGui.Checkbox("Open when the journal opens", ref openWith))
-        {
-            config.OpenWithJournal = openWith;
-            config.Save();
-        }
-
-        var closeWith = config.CloseWithJournal;
-        if (ImGui.Checkbox("Close when the journal closes", ref closeWith))
-        {
-            config.CloseWithJournal = closeWith;
-            config.Save();
-        }
-
-        ImGui.TextDisabled("The plan assumes you earn no new Second Chance points this week.");
-    }
-
-    // Formatting
 
     private static string Pct(double p)
     {
         if (p <= 0) return "0%";
         if (p >= 0.9995) return "100%";
-        if (p < 0.001) return "<0.1%";
-        return $"{p * 100:0.0}%";
+        if (p < 0.01) return $"{p * 100:0.0}%";
+        if (p >= 0.995) return "99%"; // never round a maybe up to a sure thing
+        return $"{p * 100:0}%";
     }
 
-    private static string GoalValue(Goal goal, double v) =>
-        goal == Goal.MostLines ? $"{v:0.00} lines" : Pct(v);
+    private static Vector4 Hex(uint rgb) => new(
+        ((rgb >> 16) & 0xFF) / 255f,
+        ((rgb >> 8) & 0xFF) / 255f,
+        (rgb & 0xFF) / 255f,
+        1f);
 }

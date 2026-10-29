@@ -6,22 +6,18 @@ The game drops each sticker on a random open square, so you can't choose where i
 
 ## What it shows
 
-1. **Verdict:** SHUFFLE NOW or HOLD, with your goal odds for each choice.
-2. **Odds table:** chance of 1+, 2+, and 3 lines if you stop shuffling, if you hold, and if you shuffle now.
-3. **Live grid:** your journal, with each open square colored by how lucky it would be if the next sticker landed there. Hover a square for the full odds.
-4. **Planner mode:** click squares to test any board and any number of points.
-5. **Settings:** pick your goal, keep points in reserve for Retry, and auto open with the journal.
+A small window styled like Khloe's journal that gives you one clear call:
+
+| Verdict | When |
+|---|---|
+| **Keep stamping!** | A shuffle wouldn't help right now. Before 7 stickers, with a lucky board, or after 8. |
+| **Shake it up!** | You're at 7 stickers and a shuffle improves your odds. |
+| **Grab more points!** | A shuffle would help, but you're short on Second Chance points. Tells you how to earn them. |
+| **Off to Khloe!** | Your journal is full. |
+
+Each verdict comes with one sentence explaining why, using your real odds for the goal you picked: **Any line**, **2 lines**, or **Jackpot**. A tiny mirror of your journal shows the stickers the advisor sees, and **Show the math** opens the full odds.
 
 Open it with `/wta`, or let it pop up when you open the journal.
-
-### Goals
-
-| Goal | Best for |
-|---|---|
-| At least one line | Tomestones, MGP card, Bronze cert |
-| Two or more lines | Silver cert, uncapped tomes |
-| Three lines (jackpot) | 1M MGP, Gold cert. Rare: about 0.9% even with 9 points |
-| Most lines on average | A balanced middle ground |
 
 ### How the math works
 
@@ -55,7 +51,7 @@ Every push also runs the **Build** workflow, which compiles the plugin and uploa
 
 ## First run check
 
-Open your in game journal next to the advisor and confirm the gold squares match your stickers. If the grid looks shifted or mirrored, use Planner mode in the meantime and report it; the fix is a one line index change in `Game/JournalReader.cs`.
+Open your in game journal next to the advisor and confirm the orange stickers in the mini grid match your journal. If the grid looks shifted or mirrored, report it; the fix is a one line index change in `Game/JournalReader.cs`.
 
 ## Troubleshooting
 

@@ -2,15 +2,15 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
     <!-- The release workflow overrides Version from the git tag (v1.2.3 becomes 1.2.3.0). -->
-    <Version>1.0.0.0</Version>
+    <Version>1.1.0.0</Version>
     <AssemblyName>TailsAdvisor</AssemblyName>
     <RootNamespace>TailsAdvisor</RootNamespace>
 
     <!-- Plugin manifest fields, shown in /xlplugins -->
     <Author>Day Moonlight</Author>
     <Name>Wondrous Tails Advisor</Name>
-    <Punchline>Tells you when to Shuffle your Wondrous Tails journal and when to hold.</Punchline>
-    <Description>Reads your Wondrous Tails journal and works out the optimal Shuffle plan for the Second Chance points you have. Shows your odds of 1, 2, and 3 lines, colors each open square by how lucky a landing there would be, and gives a clear Shuffle now or Hold call. Pick your goal (any line, two lines, or the three line jackpot), keep points in reserve for Retry, and test boards by hand in Planner mode. Open it with /wta.</Description>
+    <Punchline>Your Wondrous Tails buddy: tells you when to shake up your journal and when to keep stamping.</Punchline>
+    <Description>A little sticker book helper for Khloe's journal. Pick your goal (any line, two lines, or the jackpot) and it reads your journal to give you one clear call: Keep stamping, Shake it up, Grab more points, or Off to Khloe, with a one line reason using your real odds. Open it with /wta or just open your journal.</Description>
     <Tags>wondrous tails;khloe;journal;shuffle;second chance;weekly</Tags>
     <RepoUrl>https://github.com/</RepoUrl>
   </PropertyGroup>

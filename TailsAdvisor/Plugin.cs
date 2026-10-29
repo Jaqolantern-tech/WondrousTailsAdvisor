@@ -2,6 +2,8 @@ using System;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Command;
+using Dalamud.Interface.GameFonts;
+using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
@@ -27,6 +29,10 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
 
     public Configuration Configuration { get; }
+
+    /// <summary>The game's Jupiter typeface, for the journal title and the verdict.</summary>
+    public IFontHandle TitleFont { get; }
+    public IFontHandle HeadlineFont { get; }
     public AdvisorService Advisor { get; } = new();
 
     /// <summary>Latest journal read from the game. Null when logged out.</summary>
@@ -40,6 +46,10 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        Configuration.Migrate();
+
+        TitleFont = PluginInterface.UiBuilder.FontAtlas.NewGameFontHandle(new GameFontStyle(GameFontFamilyAndSize.Jupiter20));
+        HeadlineFont = PluginInterface.UiBuilder.FontAtlas.NewGameFontHandle(new GameFontStyle(GameFontFamilyAndSize.Jupiter23));
 
         mainWindow = new MainWindow(this);
         windowSystem.AddWindow(mainWindow);
@@ -71,6 +81,8 @@ public sealed class Plugin : IDalamudPlugin
         CommandManager.RemoveHandler(Command);
         CommandManager.RemoveHandler(CommandLong);
         Advisor.Dispose();
+        TitleFont.Dispose();
+        HeadlineFont.Dispose();
     }
 
     public void ToggleMainUi() => mainWindow.Toggle();
