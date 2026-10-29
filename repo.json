@@ -3,8 +3,8 @@
     "Author": "Edualc",
     "Name": "Gil Tracker",
     "InternalName": "GilTracker",
-    "AssemblyVersion": "1.0.0.0",
-    "Description": "A merchant's ledger for your wallet. Tracks the gil you earn and spend by source (market board sales, vendors, duties, quests, trades, repairs, teleports and more) for this session, today, the last 7 days, and all time, with a 14 day chart and a gil per hour rate. Market board sales are counted when you visit a summoning bell. Open it with /gil.",
+    "AssemblyVersion": "1.0.2.0",
+    "Description": "A merchant's ledger for your wallet. Tracks the gil you earn and spend by source (market board, vendors, duties, FATEs, treasure maps, quests, trades, housing, repairs, teleports and more) for this session, today, the last 7 days, and all time, with a 14 day chart and a gil per hour rate. Market board sales are counted when you visit a summoning bell. Open it with /gil.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor",
     "Tags": [
@@ -22,13 +22,13 @@
     "LoadPriority": 0,
     "Punchline": "See how much gil you make and spend, and exactly where it comes from.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-4/GilTracker.zip",
-    "DownloadLinkUpdate": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-4/GilTracker.zip",
-    "DownloadLinkTesting": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-4/GilTracker.zip",
+    "DownloadLinkInstall": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-5/GilTracker.zip",
+    "DownloadLinkUpdate": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-5/GilTracker.zip",
+    "DownloadLinkTesting": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-5/GilTracker.zip",
     "IconUrl": "https://raw.githubusercontent.com/Jaqolantern-tech/WondrousTailsAdvisor/main/images/giltracker-icon.png",
     "IsHide": false,
     "IsTestingExclusive": false,
-    "LastUpdate": 1793243109
+    "LastUpdate": 1793243587
   },
   {
     "Author": "Edualc",
@@ -53,12 +53,12 @@
     "LoadPriority": 0,
     "Punchline": "Your Wondrous Tails buddy: tells you when to shake up your journal and when to keep stamping.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-4/TailsAdvisor.zip",
-    "DownloadLinkUpdate": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-4/TailsAdvisor.zip",
-    "DownloadLinkTesting": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-4/TailsAdvisor.zip",
+    "DownloadLinkInstall": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-5/TailsAdvisor.zip",
+    "DownloadLinkUpdate": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-5/TailsAdvisor.zip",
+    "DownloadLinkTesting": "https://github.com/Jaqolantern-tech/WondrousTailsAdvisor/releases/download/release-5/TailsAdvisor.zip",
     "IconUrl": "https://raw.githubusercontent.com/Jaqolantern-tech/WondrousTailsAdvisor/main/images/icon.png",
     "IsHide": false,
     "IsTestingExclusive": false,
-    "LastUpdate": 1793243109
+    "LastUpdate": 1793243587
   }
 ]
