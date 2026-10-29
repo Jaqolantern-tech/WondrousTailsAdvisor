@@ -1,9 +1,5 @@
 name: Release all plugins
 
-# Builds every plugin folder in this repo (any folder holding a .csproj), attaches them to one
-# GitHub Release, and rewrites repo.json so Dalamud lists all of them.
-# To ship an update, bump <Version> in that plugin's .csproj first, then run this.
-
 on:
   workflow_dispatch:
 
@@ -56,9 +52,18 @@ jobs:
           name: ${{ steps.tag.outputs.tag }}
           target_commitish: ${{ github.sha }}
           files: ${{ runner.temp }}/out/*.zip
-         - name: Update repo.json
-           env:
-             BRANCH: ${{ github.event.repository.default_branch }}
-             TAG: ${{ steps.tag.outputs.tag }}
-           run: |
-             git fetch origin
+
+      - name: Update repo.json
+        env:
+          BRANCH: ${{ github.event.repository.default_branch }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          git fetch origin "$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
+          NOW=$(date +%s)
+          for f in "$RUNNER_TEMP"/out/*.json; do
+            name=$(basename "$f" .json)
+            if [ "$name" = "TailsAdvisor" ]; then icon="icon.png"; else icon="$(echo "$name" | tr 'A-Z' 'a-z')-icon.png"; fi
+            DL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${name}.zip"
+            ICON="https://raw.githubusercontent.com/${{ github.repository }}/${BRANCH}/images/${icon}"
+            jq
